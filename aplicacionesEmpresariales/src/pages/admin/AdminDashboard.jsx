@@ -14,6 +14,7 @@ import {
   Bars3Icon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import axios from 'axios';
 import Navbar from '../../components/Navbar';
 
 const AdminDashboard = () => {
@@ -28,6 +29,7 @@ const AdminDashboard = () => {
   const [recentBusinesses, setRecentBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -37,30 +39,44 @@ const AdminDashboard = () => {
     }
     setCurrentUser(user);
 
-    // Simular carga de datos
-    const loadData = async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Datos de prueba para el dashboard
-      setStats({
-        totalBusinesses: 42,
-        activeSubscriptions: 156,
-        totalRevenue: 12543000,
-        newCustomers: 23
-      });
-
-      setRecentBusinesses([
-        { id: 1, name: 'Tech Solutions SA', email: 'contacto@techsolutions.cl', subscriptions: 8, status: 'active' },
-        { id: 2, name: 'Digital Marketing SpA', email: 'info@digitalmkt.cl', subscriptions: 12, status: 'active' },
-        { id: 3, name: 'Cloud Services Ltda', email: 'ventas@cloudservices.cl', subscriptions: 5, status: 'pending' },
-        { id: 4, name: 'Consultoría Financiera', email: 'admin@consultoriaf.cl', subscriptions: 3, status: 'active' },
-        { id: 5, name: 'Software Factory', email: 'contact@softfactory.cl', subscriptions: 7, status: 'suspended' }
-      ]);
-
-      setLoading(false);
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        
+        const [statsResponse, businessesResponse] = await Promise.all([
+          axios.get('http://localhost:5000/api/admin/stats', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          axios.get('http://localhost:5000/api/admin/recent-businesses', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
+        
+        setStats(statsResponse.data);
+        setRecentBusinesses(businessesResponse.data.businesses);
+        setLoading(false);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Error al cargar los datos del dashboard');
+        setLoading(false);
+        
+        if (err.response && err.response.status === 401) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('currentUser');
+          navigate('/login');
+        }
+      }
     };
 
-    loadData();
+    // Cargar datos inmediatamente
+    fetchData();
+    
+    // Configurar intervalo para refrescar cada 30 segundos
+    const intervalId = setInterval(fetchData, 30000);
+    
+    // Limpiar intervalo al desmontar el componente
+    return () => clearInterval(intervalId);
   }, [navigate]);
 
   const formatCurrency = (value) => {
@@ -73,8 +89,55 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex">
+          {/* Sidebar skeleton */}
+          <div className="hidden md:flex md:flex-shrink-0">
+            <div className="flex flex-col w-64 fixed h-full bg-white border-r border-gray-200">
+              <div className="h-16 bg-gray-200 animate-pulse"></div>
+              <div className="p-4 space-y-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          {/* Content skeleton */}
+          <div className="flex-1 md:ml-64 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white p-6 rounded-lg shadow h-32 animate-pulse"></div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow h-96 animate-pulse"></div>
+              <div className="space-y-6">
+                <div className="bg-white p-6 rounded-lg shadow h-48 animate-pulse"></div>
+                <div className="bg-white p-6 rounded-lg shadow h-64 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="bg-white p-6 rounded-lg shadow-md max-w-md">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-block px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Reintentar
+          </button>
+        </div>
       </div>
     );
   }
@@ -153,6 +216,7 @@ const AdminDashboard = () => {
                 <button
                   onClick={() => {
                     localStorage.removeItem('currentUser');
+                    localStorage.removeItem('access_token');
                     navigate('/login');
                   }}
                   className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
@@ -354,13 +418,6 @@ const AdminDashboard = () => {
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h2 className="text-lg font-medium text-gray-900 mb-4">Acciones rápidas</h2>
                   <div className="space-y-3">
-                    <Link 
-                      to="/admin/empresas/nueva" 
-                      className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <BuildingOfficeIcon className="-ml-1 mr-2 h-5 w-5" />
-                      Registrar nueva empresa
-                    </Link>
                     <Link 
                       to="/admin/permisos" 
                       className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"

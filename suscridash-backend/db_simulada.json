@@ -8,27 +8,45 @@
       "user_type": "admin"
     },
     {
-      "id": "2",
-      "email": "empresa@ejemplo.cl",
-      "password": "empresa123",
-      "name": "Empresa Ejemplo",
-      "user_type": "business",
-      "business_name": "Mi Empresa SA",
-      "tax_id": "12345678-9"
-    },
-    {
-      "id": "3",
-      "email": "cliente@ejemplo.cl",
-      "password": "cliente123",
-      "name": "Cliente Ejemplo",
-      "user_type": "customer"
-    },
-    {
       "id": "b7a22f85-66cf-45f3-99c0-b8a75f5ee461",
       "email": "jperez@ejemplo.cl",
       "password": "cliente123",
       "name": "Juan Perez",
       "user_type": "customer"
+    },
+    {
+      "id": "aae5c99f-f4eb-43f7-b708-e123200510cf",
+      "email": "crodriguez@ejemplo.cl",
+      "password": "cliente123",
+      "name": "Carlos Rodriguez",
+      "user_type": "customer"
+    },
+    {
+      "id": "3873e0a0-81e9-4484-bb41-c008c665a33a",
+      "email": "uct@ejemplo.cl",
+      "password": "empresa123",
+      "name": "Universidad Cat\u00f3lica",
+      "user_type": "business",
+      "business_name": "Universidad Cat\u00f3lica",
+      "tax_id": "12345678-9"
+    },
+    {
+      "id": "88a7f45d-5117-462b-b9be-f8bbc7298379",
+      "email": "prueba@ejemplo.cl",
+      "password": "empresa123",
+      "name": "prueba spa",
+      "user_type": "business",
+      "business_name": "prueba spa",
+      "tax_id": "12345678-9"
+    },
+    {
+      "id": "cbd660c5-cb1a-44a3-8220-baebe1f2d6a8",
+      "email": "empresa@ejemplo.cl",
+      "password": "empresa123",
+      "name": "empresa spa",
+      "user_type": "business",
+      "business_name": "empresa spa",
+      "tax_id": "12345678-9"
     }
   ]
 }
