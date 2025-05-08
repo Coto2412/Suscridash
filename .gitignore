@@ -1,0 +1,10 @@
+# Backend
+suscridash_backend/__pycache__/
+suscridash_backend/.env
+suscridash_backend/*.pyc
+suscridash_backend/venv/
+
+# Frontend
+aplicacionesEmpresariales/node_modules/
+aplicacionesEmpresariales/dist/
+AplicacionesEmpresariales/.env
