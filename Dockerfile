@@ -15,4 +15,4 @@ COPY suscridash-backend .
 EXPOSE $PORT
 
 # Comando para iniciar Gunicorn
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
