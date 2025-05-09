@@ -1,12 +1,7 @@
-ses.setup]
+[phases.setup]
 cmds = [
-    "cd suscridash-backend && pip install -r requirements.txt",
-]
-
-[phases.install]
-cmds = [
-    "cd suscridash-backend && pip install gunicorn",
+    "cd suscridash-backend && python -m pip install --upgrade pip && pip install -r requirements.txt",
 ]
 
 [start]
-Cmd = "cd suscridash-backend && gunicorn app:app --bind 0.0.0.0:$PORT"
+cmd = "cd suscridash-backend && gunicorn app:app --bind 0.0.0.0:$PORT"
