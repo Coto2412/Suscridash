@@ -80,33 +80,80 @@ def init_db():
                 }
             ],
             'subscriptions': [
+                {
+                    'id': '1',
+                    'business_id': '2',  # Empresa Ejemplo
+                    'customer_id': '3',  # Cliente Ejemplo
+                    'plan_id': '1',      # Plan Básico
+                    'start_date': '2023-05-15',
+                    'renewal_date': '2023-06-15',
+                    'status': 'active',
+                    'payment_method': 'Visa **** 4242',
+                    'monthly_amount': 9900,
+                    'created_at': '2023-05-15T10:30:00'
+                },
+                {
+                    'id': '2',
+                    'business_id': '2',  # Empresa Ejemplo
+                    'customer_id': '6',  # Otro cliente (agregar a users si no existe)
+                    'plan_id': '2',      # Plan Premium
+                    'start_date': '2023-04-10',
+                    'renewal_date': '2023-06-10',
+                    'status': 'active',
+                    'payment_method': 'Mastercard **** 5555',
+                    'monthly_amount': 19900,
+                    'created_at': '2023-04-10T14:15:00'
+                },
+                {
+                    'id': '3',
+                    'business_id': '2',  # Empresa Ejemplo
+                    'customer_id': '7',  # Otro cliente (agregar a users si no existe)
+                    'plan_id': '1',      # Plan Básico
+                    'start_date': '2023-01-20',
+                    'renewal_date': '2023-07-20',
+                    'status': 'cancelled',
+                    'payment_method': 'Transferencia bancaria',
+                    'monthly_amount': 9900,
+                    'created_at': '2023-01-20T09:45:00'
+                }
+            ],
+                # En la función init_db(), agregar esto al diccionario _db:
+            'subscription_plans': [
                     {
                         'id': '1',
-                        'business_id': '2',
-                        'customer_id': '3',
-                        'business_name': 'Empresa Ejemplo',
-                        'plan_name': 'Empresarial',
-                        'start_date': '2023-01-01',
-                        'renewal_date': '2024-01-01',
-                        'status': 'active',
-                        'monthly_amount': 89900,
-                        'payment_method': 'credit_card',
+                        'business_id': '2',  # Empresa Ejemplo
+                        'nombre': "Plan Básico",
+                        'precio': 9900,
+                        'moneda': "CLP",
+                        'periodo': "mes",
+                        'descripcion': "Acceso básico a las funcionalidades",
+                        'caracteristicas': ["Soporte por email", "Acceso básico"],
+                        'estado': "activo",
                         'created_at': '2023-01-01T00:00:00'
                     },
                     {
                         'id': '2',
-                        'business_id': '4',
-                        'customer_id': '3',
-                        'business_name': 'Tech Solutions SA',
-                        'plan_name': 'Profesional',
-                        'start_date': '2023-02-15',
-                        'renewal_date': '2024-02-15',
-                        'status': 'active',
-                        'monthly_amount': 39900,
-                        'payment_method': 'bank_transfer',
-                        'created_at': '2023-02-15T10:30:00'
+                        'business_id': '2',  # Empresa Ejemplo
+                        'nombre': "Plan Premium",
+                        'precio': 19900,
+                        'moneda': "CLP",
+                        'periodo': "mes",
+                        'descripcion': "Acceso completo con soporte prioritario",
+                        'caracteristicas': ["Soporte 24/7", "Acceso completo", "Actualizaciones"],
+                        'estado': "activo",
+                        'created_at': '2023-01-01T00:00:00'
                     }
-                ]
+                ],
+                'system_settings': {
+                    'system_name': 'Suscridash',
+                    'currency': 'CLP',
+                    'logo_url': '',
+                    'session_timeout': 30,  # minutos
+                    'email_notifications': True,
+                    'app_notifications': True,
+                    'created_at': '2023-01-01T00:00:00',
+                    'updated_at': '2023-01-01T00:00:00'
+                }
             }
             save_db()   
 

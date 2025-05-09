@@ -62,5 +62,32 @@
       "payment_method": "credit_card",
       "created_at": "2025-05-09T00:22:45.460015"
     }
-  ]
+  ],
+  "subscription_plans": [
+    {
+      "id": "37dc0914-6abe-4529-9f13-ff3bbc254e7d",
+      "business_id": "cbd660c5-cb1a-44a3-8220-baebe1f2d6a8",
+      "nombre": "Plan Premium",
+      "precio": 20000,
+      "moneda": "CLP",
+      "periodo": "mes",
+      "descripcion": "prueba de plan",
+      "caracteristicas": [
+        "API",
+        "React"
+      ],
+      "estado": "activo",
+      "created_at": "2025-05-09T05:26:51.322679"
+    }
+  ],
+  "system_settings": {
+    "system_name": "Suscridash",
+    "currency": "CLP",
+    "session_timeout": 45,
+    "email_notifications": true,
+    "app_notifications": true,
+    "updated_at": "2025-05-09T19:30:34.924058",
+    "logo_url": "",
+    "created_at": "2025-05-09T19:23:28.413249"
+  }
 }

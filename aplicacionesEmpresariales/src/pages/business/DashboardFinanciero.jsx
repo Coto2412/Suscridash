@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import {
   Chart as ChartJS,
@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 
 ChartJS.register(
   CategoryScale,
@@ -29,33 +30,46 @@ ChartJS.register(
 
 const DashboardFinanciero = () => {
   const [timeRange, setTimeRange] = useState('mensual');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [data, setData] = useState({
+    ingresos: { labels: [], data: [] },
+    gastos: { labels: [], data: [] },
+    resumen: { ingresos: 0, gastos: 0, beneficio: 0, margen: 0 },
+    suscripciones: {
+      total: 0,
+      activas: 0,
+      canceladas: 0,
+      crecimiento: 0,
+      planes: [],
+      tendencia: []
+    }
+  });
 
-  // Datos financieros
-  const ingresosData = {
-    mensual: [12000, 19000, 15000, 18000, 22000, 25000, 21000],
-    trimestral: [45000, 52000, 68000],
-    anual: [250000, 280000, 310000]
-  };
-
-  const gastosData = {
-    mensual: [5000, 8000, 3000, 2000],
-    trimestral: [15000, 24000, 9000, 6000],
-    anual: [60000, 96000, 36000, 24000]
-  };
-
-  // Métricas de suscripciones
-  const metricasSuscripciones = {
-    total: 1245,
-    activas: 892,
-    canceladas: 353,
-    crecimiento: 12.5,
-    planes: [
-      { nombre: 'Básico', cantidad: 512, color: 'rgba(79, 70, 229, 0.7)' },
-      { nombre: 'Premium', cantidad: 380, color: 'rgba(99, 102, 241, 0.7)' },
-      { nombre: 'Empresarial', cantidad: 353, color: 'rgba(129, 140, 248, 0.7)' }
-    ],
-    tendencia: [65, 59, 80, 81, 56, 55, 90]
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('access_token');
+        
+        const response = await axios.get(`http://localhost:5000/api/business/financial-stats?range=${timeRange}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        setData(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching financial data:', err);
+        setError('Error al cargar los datos financieros');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [timeRange]);
 
   // Configuración de gráficos
   const chartOptions = {
@@ -76,23 +90,19 @@ const DashboardFinanciero = () => {
   // Datos para gráficos
   const getChartData = () => ({
     ingresos: {
-      labels: timeRange === 'mensual' 
-        ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'] 
-        : timeRange === 'trimestral' 
-          ? ['Q1', 'Q2', 'Q3'] 
-          : ['2021', '2022', '2023'],
+      labels: data.ingresos.labels,
       datasets: [{
         label: 'Ingresos',
-        data: ingresosData[timeRange],
+        data: data.ingresos.data,
         backgroundColor: 'rgba(79, 70, 229, 0.7)',
         borderColor: 'rgba(79, 70, 229, 1)',
         borderWidth: 1
       }]
     },
     gastos: {
-      labels: ['Suscripciones', 'Nóminas', 'Servicios', 'Otros'],
+      labels: data.gastos.labels,
       datasets: [{
-        data: gastosData[timeRange],
+        data: data.gastos.data,
         backgroundColor: [
           'rgba(79, 70, 229, 0.7)',
           'rgba(99, 102, 241, 0.7)',
@@ -112,7 +122,7 @@ const DashboardFinanciero = () => {
       labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'],
       datasets: [{
         label: 'Crecimiento',
-        data: metricasSuscripciones.tendencia,
+        data: data.suscripciones.tendencia,
         fill: false,
         backgroundColor: 'rgba(79, 70, 229, 1)',
         borderColor: 'rgba(79, 70, 229, 0.7)',
@@ -120,15 +130,37 @@ const DashboardFinanciero = () => {
       }]
     },
     planes: {
-      labels: metricasSuscripciones.planes.map(p => p.nombre),
+      labels: data.suscripciones.planes.map(p => p.nombre),
       datasets: [{
-        data: metricasSuscripciones.planes.map(p => p.cantidad),
-        backgroundColor: metricasSuscripciones.planes.map(p => p.color)
+        data: data.suscripciones.planes.map(p => p.cantidad),
+        backgroundColor: data.suscripciones.planes.map(p => p.color)
       }]
     }
   });
 
   const chartData = getChartData();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex justify-center items-center h-screen">
+          <div className="text-xl font-semibold">Cargando datos financieros...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex justify-center items-center h-screen">
+          <div className="text-xl font-semibold text-red-500">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -159,23 +191,22 @@ const DashboardFinanciero = () => {
           {[
             { 
               title: 'Ingresos', 
-              value: ingresosData[timeRange].reduce((a, b) => a + b, 0), 
+              value: data.resumen.ingresos, 
               color: 'indigo-600' 
             },
             { 
               title: 'Gastos', 
-              value: gastosData[timeRange].reduce((a, b) => a + b, 0), 
+              value: data.resumen.gastos, 
               color: 'red-500' 
             },
             { 
               title: 'Beneficio Neto', 
-              value: ingresosData[timeRange].reduce((a, b) => a + b, 0) - gastosData[timeRange].reduce((a, b) => a + b, 0), 
+              value: data.resumen.beneficio, 
               color: 'green-500' 
             },
             { 
               title: 'Margen', 
-              value: ((ingresosData[timeRange].reduce((a, b) => a + b, 0) - gastosData[timeRange].reduce((a, b) => a + b, 0)) / 
-                     ingresosData[timeRange].reduce((a, b) => a + b, 0) * 100), // Added closing parenthesis here and a comma
+              value: data.resumen.margen,
               suffix: '%',
               color: 'blue-500' 
             }
@@ -192,10 +223,10 @@ const DashboardFinanciero = () => {
         {/* Métricas de suscripciones */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
-            { title: 'Suscripciones Totales', value: metricasSuscripciones.total, color: 'indigo-600' },
-            { title: 'Activas', value: metricasSuscripciones.activas, color: 'green-500' },
-            { title: 'Canceladas', value: metricasSuscripciones.canceladas, color: 'red-500' },
-            { title: 'Crecimiento', value: metricasSuscripciones.crecimiento, suffix: '%', color: 'blue-500' }
+            { title: 'Suscripciones Totales', value: data.suscripciones.total, color: 'indigo-600' },
+            { title: 'Activas', value: data.suscripciones.activas, color: 'green-500' },
+            { title: 'Canceladas', value: data.suscripciones.canceladas, color: 'red-500' },
+            { title: 'Crecimiento', value: data.suscripciones.crecimiento, suffix: '%', color: 'blue-500' }
           ].map((item, index) => (
             <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
               <h3 className="text-lg font-medium text-gray-500">{item.title}</h3>
@@ -248,7 +279,7 @@ const DashboardFinanciero = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Tendencia de Crecimiento</h2>
               <span className="text-sm text-green-500">
-                {metricasSuscripciones.crecimiento > 0 ? '↑' : '↓'} {Math.abs(metricasSuscripciones.crecimiento)}%
+                {data.suscripciones.crecimiento > 0 ? '↑' : '↓'} {Math.abs(data.suscripciones.crecimiento)}%
               </span>
             </div>
             <div className="h-80">
@@ -262,22 +293,10 @@ const DashboardFinanciero = () => {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Acciones Rápidas</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
-              to="/business/planes/nuevo"
-              className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-center"
-            >
-              <div className="text-indigo-600 font-medium">Crear nuevo plan</div>
-            </Link>
-            <Link
               to="/business/suscriptores"
               className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-center"
             >
               <div className="text-indigo-600 font-medium">Ver suscriptores</div>
-            </Link>
-            <Link
-              to="/business/configuracion"
-              className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-center"
-            >
-              <div className="text-indigo-600 font-medium">Configuración</div>
             </Link>
           </div>
         </div>

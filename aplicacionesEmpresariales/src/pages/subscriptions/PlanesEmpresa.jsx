@@ -16,10 +16,17 @@ const PlanesEmpresa = () => {
   useEffect(() => {
     const fetchEmpresa = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
+        // Intentar obtener el token si existe
         const token = localStorage.getItem('access_token');
-        const response = await axios.get(`http://localhost:5000/api/businesses/${empresaId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        
+        const response = await axios.get(
+          `http://localhost:5000/api/businesses/${empresaId}`,
+          { headers }
+        );
         
         if (!response.data.business) {
           throw new Error('Empresa no encontrada');
@@ -37,10 +44,10 @@ const PlanesEmpresa = () => {
     fetchEmpresa();
   }, [empresaId]);
 
-  const formatoPrecio = (precio) => {
+  const formatoPrecio = (precio, moneda = 'CLP') => {
     return new Intl.NumberFormat('es-CL', { 
       style: 'currency', 
-      currency: 'CLP',
+      currency: moneda,
       minimumFractionDigits: 0 
     }).format(precio);
   };
@@ -138,7 +145,7 @@ const PlanesEmpresa = () => {
           
           <div className="flex items-start mt-4">
             <div className="bg-indigo-100 p-3 rounded-lg mr-4">
-              <span className="text-3xl">{empresa.logo || '🏢'}</span>
+              <span className="text-3xl">{empresa.logo}</span>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
@@ -178,12 +185,12 @@ const PlanesEmpresa = () => {
                 
                 <div className="mb-4">
                   <span className="text-2xl font-bold text-gray-900">
-                    {formatoPrecio(plan.monthly_price)}
+                    {formatoPrecio(plan.monthly_price, plan.currency)}
                   </span>
                   <span className="text-gray-500">/mes</span>
                   {plan.yearly_price && (
                     <div className="text-sm text-gray-500">
-                      o {formatoPrecio(plan.yearly_price)} al año ({Math.round((1 - (plan.yearly_price / (plan.monthly_price * 12))) * 100)}% de descuento)
+                      o {formatoPrecio(plan.yearly_price, plan.currency)} al año ({Math.round((1 - (plan.yearly_price / (plan.monthly_price * 12))) * 100)}% de descuento)
                     </div>
                   )}
                 </div>

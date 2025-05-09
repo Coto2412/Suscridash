@@ -1,7 +1,9 @@
+// NuevoPlan.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckIcon } from '@heroicons/react/24/outline';
 import Navbar from '../../components/Navbar';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const NuevoPlan = () => {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ const NuevoPlan = () => {
     caracteristicas: [''],
     estado: 'activo'
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,165 +29,215 @@ const NuevoPlan = () => {
     setPlan(prev => ({ ...prev, caracteristicas: nuevasCaracteristicas }));
   };
 
-  const agregarCaracteristica = () => {
+  const addCaracteristica = () => {
     setPlan(prev => ({ ...prev, caracteristicas: [...prev.caracteristicas, ''] }));
   };
 
-  const removerCaracteristica = (index) => {
-    setPlan(prev => ({
-      ...prev,
-      caracteristicas: prev.caracteristicas.filter((_, i) => i !== index)
-    }));
+  const removeCaracteristica = (index) => {
+    const nuevasCaracteristicas = plan.caracteristicas.filter((_, i) => i !== index);
+    setPlan(prev => ({ ...prev, caracteristicas: nuevasCaracteristicas }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Aquí iría la lógica para guardar el plan
-    alert('Plan creado exitosamente!');
-    navigate('/business/planes');
+    setLoading(true);
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post('http://localhost:5000/api/business/plans', plan, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      Swal.fire({
+        title: 'Éxito',
+        text: 'Plan creado correctamente',
+        icon: 'success'
+      }).then(() => {
+        navigate('/business/planes');
+      });
+    } catch (error) {
+      console.error('Error al crear plan:', error);
+      Swal.fire({
+        title: 'Error',
+        text: error.response?.data?.error || 'No se pudo crear el plan',
+        icon: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <Link to="/business/planes" className="text-indigo-600 hover:text-indigo-800">
-            ← Volver a todos los planes
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">Crear Nuevo Plan</h1>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-indigo-600">Nuevo Plan de Suscripción</h1>
+          <button
+            onClick={() => navigate('/business/planes')}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className="bg-white shadow rounded-lg overflow-hidden p-6">
           <form onSubmit={handleSubmit}>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del plan</label>
+                <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">
+                  Nombre del Plan
+                </label>
                 <input
                   type="text"
+                  id="nombre"
                   name="nombre"
                   value={plan.nombre}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio</label>
+                  <label htmlFor="precio" className="block text-sm font-medium text-gray-700">
+                    Precio
+                  </label>
                   <input
                     type="number"
+                    id="precio"
                     name="precio"
                     value={plan.precio}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    min="0"
+                    step="0.01"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     required
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+                  <label htmlFor="moneda" className="block text-sm font-medium text-gray-700">
+                    Moneda
+                  </label>
                   <select
+                    id="moneda"
                     name="moneda"
                     value={plan.moneda}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   >
-                    <option value="CLP">CLP (Peso chileno)</option>
-                    <option value="USD">USD (Dólar americano)</option>
+                    <option value="CLP">CLP ($)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
                   </select>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Periodo</label>
+                  <label htmlFor="periodo" className="block text-sm font-medium text-gray-700">
+                    Periodo de facturación
+                  </label>
                   <select
+                    id="periodo"
                     name="periodo"
                     value={plan.periodo}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   >
                     <option value="dia">Diario</option>
                     <option value="semana">Semanal</option>
                     <option value="mes">Mensual</option>
-                    <option value="año">Anual</option>
+                    <option value="ano">Anual</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
+                  Descripción
+                </label>
                 <textarea
+                  id="descripcion"
                   name="descripcion"
+                  rows={3}
                   value={plan.descripcion}
                   onChange={handleChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Características</label>
-                <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Características
+                </label>
+                <div className="mt-1 space-y-2">
                   {plan.caracteristicas.map((caracteristica, index) => (
-                    <div key={index} className="flex items-center">
+                    <div key={index} className="flex space-x-2">
                       <input
                         type="text"
                         value={caracteristica}
                         onChange={(e) => handleCaracteristicaChange(index, e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                         required
                       />
-                      <button
-                        type="button"
-                        onClick={() => removerCaracteristica(index)}
-                        className="ml-2 p-2 text-red-600 hover:text-red-800"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
+                      {plan.caracteristicas.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeCaracteristica(index)}
+                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          Eliminar
+                        </button>
+                      )}
                     </div>
                   ))}
                   <button
                     type="button"
-                    onClick={agregarCaracteristica}
-                    className="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+                    onClick={addCaracteristica}
+                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
-                    <PlusIcon className="h-4 w-4 mr-1" />
-                    Agregar característica
+                    Añadir característica
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="estado"
-                    name="estado"
-                    checked={plan.estado === 'activo'}
-                    onChange={() => setPlan(prev => ({
-                      ...prev,
-                      estado: prev.estado === 'activo' ? 'inactivo' : 'activo'
-                    }))}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="estado" className="ml-2 block text-sm text-gray-700">
-                    Plan activo (disponible para nuevos suscriptores)
-                  </label>
-                </div>
+                <label htmlFor="estado" className="block text-sm font-medium text-gray-700">
+                  Estado
+                </label>
+                <select
+                  id="estado"
+                  name="estado"
+                  value={plan.estado}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                >
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
               </div>
-            </div>
 
-            <div className="mt-8 flex justify-end">
-              <button
-                type="submit"
-                className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium"
-              >
-                <CheckIcon className="h-5 w-5 inline mr-2" />
-                Guardar Plan
-              </button>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate('/business/planes')}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                  {loading ? 'Guardando...' : 'Guardar Plan'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

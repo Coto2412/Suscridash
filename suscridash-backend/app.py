@@ -12,11 +12,22 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173"],  # Asegúrate que este es el puerto de tu frontend
-        "methods": ["GET", "POST", "PUT", "DELETE"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "origins": ["http://localhost:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "max_age": 86400
     }
 })
+
+# Habilitar CORS para las opciones preflight
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Configuración
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -798,6 +809,698 @@ def check_customer_subscription():
     except jwt.InvalidTokenError:
         return jsonify({'error': 'Token inválido'}), 401
     
+@app.route('/api/business/financial-stats', methods=['GET'])
+def get_business_financial_stats():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        # Obtener el rango de tiempo del query param (default: mensual)
+        time_range = request.args.get('range', 'mensual')
+        
+        # Datos simulados - en un sistema real esto vendría de la base de datos
+        # Basado en el business_id del usuario (payload['user_id'])
+        
+        # Datos para diferentes rangos de tiempo
+        data = {
+            'ingresos': {
+                'mensual': {
+                    'labels': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'],
+                    'data': [12000, 19000, 15000, 18000, 22000, 25000, 21000]
+                },
+                'trimestral': {
+                    'labels': ['Q1', 'Q2', 'Q3'],
+                    'data': [45000, 52000, 68000]
+                },
+                'anual': {
+                    'labels': ['2021', '2022', '2023'],
+                    'data': [250000, 280000, 310000]
+                }
+            },
+            'gastos': {
+                'mensual': {
+                    'labels': ['Suscripciones', 'Nóminas', 'Servicios', 'Otros'],
+                    'data': [5000, 8000, 3000, 2000]
+                },
+                'trimestral': {
+                    'labels': ['Suscripciones', 'Nóminas', 'Servicios', 'Otros'],
+                    'data': [15000, 24000, 9000, 6000]
+                },
+                'anual': {
+                    'labels': ['Suscripciones', 'Nóminas', 'Servicios', 'Otros'],
+                    'data': [60000, 96000, 36000, 24000]
+                }
+            },
+            'resumen': {
+                'mensual': {
+                    'ingresos': sum([12000, 19000, 15000, 18000, 22000, 25000, 21000]),
+                    'gastos': sum([5000, 8000, 3000, 2000]),
+                    'beneficio': sum([12000, 19000, 15000, 18000, 22000, 25000, 21000]) - sum([5000, 8000, 3000, 2000]),
+                    'margen': ((sum([12000, 19000, 15000, 18000, 22000, 25000, 21000]) - sum([5000, 8000, 3000, 2000])) / 
+                              sum([12000, 19000, 15000, 18000, 22000, 25000, 21000])) * 100
+                },
+                'trimestral': {
+                    'ingresos': sum([45000, 52000, 68000]),
+                    'gastos': sum([15000, 24000, 9000, 6000]),
+                    'beneficio': sum([45000, 52000, 68000]) - sum([15000, 24000, 9000, 6000]),
+                    'margen': ((sum([45000, 52000, 68000]) - sum([15000, 24000, 9000, 6000])) / 
+                              sum([45000, 52000, 68000])) * 100
+                },
+                'anual': {
+                    'ingresos': sum([250000, 280000, 310000]),
+                    'gastos': sum([60000, 96000, 36000, 24000]),
+                    'beneficio': sum([250000, 280000, 310000]) - sum([60000, 96000, 36000, 24000]),
+                    'margen': ((sum([250000, 280000, 310000]) - sum([60000, 96000, 36000, 24000])) / 
+                              sum([250000, 280000, 310000])) * 100
+                }
+            },
+            'suscripciones': {
+                'total': 1245,
+                'activas': 892,
+                'canceladas': 353,
+                'crecimiento': 12.5,
+                'planes': [
+                    {'nombre': 'Básico', 'cantidad': 512, 'color': 'rgba(79, 70, 229, 0.7)'},
+                    {'nombre': 'Premium', 'cantidad': 380, 'color': 'rgba(99, 102, 241, 0.7)'},
+                    {'nombre': 'Empresarial', 'cantidad': 353, 'color': 'rgba(129, 140, 248, 0.7)'}
+                ],
+                'tendencia': [65, 59, 80, 81, 56, 55, 90]
+            }
+        }
+        
+        return jsonify({
+            'ingresos': data['ingresos'][time_range],
+            'gastos': data['gastos'][time_range],
+            'resumen': data['resumen'][time_range],
+            'suscripciones': data['suscripciones'],
+            'time_range': time_range
+        })
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+    except KeyError:
+        return jsonify({'error': 'Rango de tiempo no válido'}), 400
+    
+@app.route('/api/business/plans', methods=['GET'])
+def get_business_plans():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        business_id = payload['user_id']
+        
+        # Filtrar planes por business_id (en un sistema real)
+        # Aquí simulamos que todos los planes pertenecen a la empresa actual
+        plans = db.get('subscription_plans', [])
+        
+        return jsonify({'plans': plans})
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/business/plans', methods=['POST'])
+def create_business_plan():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        required_fields = ['nombre', 'precio', 'moneda', 'periodo', 'descripcion']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Falta el campo requerido: {field}'}), 400
+        
+        # Validar precio positivo
+        if not isinstance(data['precio'], (int, float)) or data['precio'] <= 0:
+            return jsonify({'error': 'El precio debe ser un número positivo'}), 400
+        
+        db = get_db()
+        if 'subscription_plans' not in db:
+            db['subscription_plans'] = []
+            
+        new_plan = {
+            'id': str(uuid.uuid4()),
+            'business_id': payload['user_id'],
+            'nombre': data['nombre'],
+            'precio': data['precio'],
+            'moneda': data['moneda'],
+            'periodo': data['periodo'],
+            'descripcion': data['descripcion'],
+            'caracteristicas': data.get('caracteristicas', []),
+            'estado': data.get('estado', 'activo'),
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        db['subscription_plans'].append(new_plan)
+        save_db()
+        
+        return jsonify({
+            'message': 'Plan creado correctamente',
+            'plan': new_plan
+        }), 201
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/business/plans/<plan_id>', methods=['PUT'])
+def update_business_plan(plan_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        data = request.get_json()
+        
+        db = get_db()
+        plans = db.get('subscription_plans', [])
+        
+        # Buscar y actualizar plan
+        for plan in plans:
+            if plan['id'] == plan_id and plan['business_id'] == payload['user_id']:
+                if 'nombre' in data:
+                    plan['nombre'] = data['nombre']
+                if 'precio' in data:
+                    if not isinstance(data['precio'], (int, float)) or data['precio'] <= 0:
+                        return jsonify({'error': 'El precio debe ser un número positivo'}), 400
+                    plan['precio'] = data['precio']
+                if 'moneda' in data:
+                    plan['moneda'] = data['moneda']
+                if 'periodo' in data:
+                    plan['periodo'] = data['periodo']
+                if 'descripcion' in data:
+                    plan['descripcion'] = data['descripcion']
+                if 'caracteristicas' in data:
+                    plan['caracteristicas'] = data['caracteristicas']
+                if 'estado' in data:
+                    plan['estado'] = data['estado']
+                
+                save_db()
+                return jsonify({
+                    'message': 'Plan actualizado correctamente',
+                    'plan': plan
+                })
+        
+        return jsonify({'error': 'Plan no encontrado'}), 404
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/business/plans/<plan_id>', methods=['DELETE'])
+def delete_business_plan(plan_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        plans = db.get('subscription_plans', [])
+        
+        # Buscar y eliminar plan
+        for i, plan in enumerate(plans):
+            if plan['id'] == plan_id and plan['business_id'] == payload['user_id']:
+                del plans[i]
+                save_db()
+                return jsonify({'message': 'Plan eliminado correctamente'})
+        
+        return jsonify({'error': 'Plan no encontrado'}), 404
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/business/plans/<plan_id>/toggle-status', methods=['PUT'])
+def toggle_business_plan_status(plan_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        plans = db.get('subscription_plans', [])
+        
+        # Buscar y cambiar estado del plan
+        for plan in plans:
+            if plan['id'] == plan_id and plan['business_id'] == payload['user_id']:
+                plan['estado'] = 'activo' if plan['estado'] == 'inactivo' else 'inactivo'
+                save_db()
+                return jsonify({
+                    'message': 'Estado del plan actualizado',
+                    'plan': plan
+                })
+        
+        return jsonify({'error': 'Plan no encontrado'}), 404
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+    
+@app.route('/api/business/subscribers', methods=['GET'])
+def get_business_subscribers():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        # Obtener parámetros de filtrado
+        status_filter = request.args.get('status', 'all')
+        search_query = request.args.get('search', '')
+        
+        db = get_db()
+        business_id = payload['user_id']
+        
+        # Filtrar suscriptores por business_id y estado
+        subscriptions = db.get('subscriptions', [])
+        users = db.get('users', [])
+        
+        # Crear diccionario de usuarios para búsqueda rápida
+        users_dict = {u['id']: u for u in users if u['user_type'] == 'customer'}
+        
+        # Obtener planes de la empresa
+        business_plans = [p for p in db.get('subscription_plans', []) 
+                         if p['business_id'] == business_id]
+        plans_dict = {p['id']: p for p in business_plans}
+        
+        subscribers = []
+        for sub in subscriptions:
+            if sub['business_id'] == business_id:
+                user = users_dict.get(sub['customer_id'])
+                plan = plans_dict.get(sub['plan_id'])
+                
+                if user and plan:
+                    subscriber_data = {
+                        'id': sub['id'],
+                        'customer_id': sub['customer_id'],
+                        'nombre': user['name'],
+                        'email': user['email'],
+                        'telefono': user.get('phone', ''),
+                        'plan_id': sub['plan_id'],
+                        'plan': plan['nombre'],
+                        'fechaInicio': sub['start_date'],
+                        'proximoPago': sub['renewal_date'],
+                        'estado': sub['status'],
+                        'metodoPago': sub['payment_method'],
+                        'created_at': sub['created_at']
+                    }
+                    
+                    # Aplicar filtros
+                    if status_filter == 'all' or sub['status'] == status_filter:
+                        if search_query.lower() in user['name'].lower() or \
+                           search_query.lower() in user['email'].lower():
+                            subscribers.append(subscriber_data)
+        
+        # Ordenar por fecha de creación (más recientes primero)
+        subscribers.sort(key=lambda x: x['created_at'], reverse=True)
+        
+        return jsonify({'subscribers': subscribers})
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/business/subscribers/<subscriber_id>', methods=['GET'])
+def get_subscriber_details(subscriber_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        business_id = payload['user_id']
+        
+        # Buscar la suscripción
+        subscription = next((s for s in db.get('subscriptions', []) 
+                          if s['id'] == subscriber_id and s['business_id'] == business_id), None)
+        
+        if not subscription:
+            return jsonify({'error': 'Suscripción no encontrada'}), 404
+            
+        # Obtener datos del usuario
+        user = next((u for u in db.get('users', []) 
+                    if u['id'] == subscription['customer_id'] and u['user_type'] == 'customer'), None)
+        
+        if not user:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+            
+        # Obtener datos del plan
+        plan = next((p for p in db.get('subscription_plans', []) 
+                   if p['id'] == subscription['plan_id']), None)
+        
+        if not plan:
+            return jsonify({'error': 'Plan no encontrado'}), 404
+            
+        # Datos completos del suscriptor
+        subscriber_data = {
+            'id': subscription['id'],
+            'customer_id': user['id'],
+            'nombre': user['name'],
+            'email': user['email'],
+            'telefono': user.get('phone', ''),
+            'plan_id': plan['id'],
+            'plan': plan['nombre'],
+            'descripcion_plan': plan['descripcion'],
+            'caracteristicas_plan': plan['caracteristicas'],
+            'fechaInicio': subscription['start_date'],
+            'proximoPago': subscription['renewal_date'],
+            'estado': subscription['status'],
+            'metodoPago': subscription['payment_method'],
+            'monto': subscription.get('monthly_amount', plan['precio']),
+            'moneda': plan['moneda'],
+            'periodo': plan['periodo'],
+            'created_at': subscription['created_at'],
+            'historial_pagos': []  # En un sistema real, esto vendría de otra tabla
+        }
+        
+        return jsonify({'subscriber': subscriber_data})
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/business/subscribers/<subscriber_id>/status', methods=['PUT'])
+def update_subscriber_status(subscriber_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        if new_status not in ['active', 'cancelled']:
+            return jsonify({'error': 'Estado no válido'}), 400
+        
+        db = get_db()
+        business_id = payload['user_id']
+        
+        # Buscar y actualizar suscripción
+        for sub in db.get('subscriptions', []):
+            if sub['id'] == subscriber_id and sub['business_id'] == business_id:
+                sub['status'] = new_status
+                save_db()
+                
+                # En un sistema real, aquí podrías registrar el cambio de estado
+                return jsonify({
+                    'message': f'Estado actualizado a {new_status}',
+                    'subscriber': {
+                        'id': sub['id'],
+                        'status': sub['status']
+                    }
+                })
+        
+        return jsonify({'error': 'Suscripción no encontrada'}), 404
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/business/subscribers/export', methods=['GET'])
+def export_subscribers():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'business':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        business_id = payload['user_id']
+        
+        # Obtener todos los suscriptores de la empresa
+        subscriptions = [s for s in db.get('subscriptions', []) 
+                        if s['business_id'] == business_id]
+        users = {u['id']: u for u in db.get('users', []) if u['user_type'] == 'customer'}
+        plans = {p['id']: p for p in db.get('subscription_plans', []) 
+                if p['business_id'] == business_id}
+        
+        # Preparar datos para exportación
+        export_data = []
+        for sub in subscriptions:
+            user = users.get(sub['customer_id'])
+            plan = plans.get(sub['plan_id'])
+            
+            if user and plan:
+                export_data.append({
+                    'Nombre': user['name'],
+                    'Email': user['email'],
+                    'Teléfono': user.get('phone', ''),
+                    'Plan': plan['nombre'],
+                    'Estado': 'Activo' if sub['status'] == 'active' else 'Cancelado',
+                    'Fecha Inicio': sub['start_date'],
+                    'Próximo Pago': sub['renewal_date'],
+                    'Método de Pago': sub['payment_method'],
+                    'Monto': f"{plan['precio']} {plan['moneda']}"
+                })
+        
+        # En un sistema real, podrías generar un CSV o Excel aquí
+        # Por simplicidad, devolvemos los datos como JSON
+        return jsonify({
+            'message': 'Datos listos para exportación',
+            'format': 'csv',  # Podría ser 'excel' o 'pdf' en un sistema real
+            'data': export_data,
+            'count': len(export_data)
+        })
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+    
+@app.route('/api/businesses/<business_id>', methods=['GET'])
+def get_business_details_public(business_id):
+    # Esta ruta es pública pero podrías querer validar el token para usuarios autenticados
+    auth_header = request.headers.get('Authorization')
+    
+    # Verificar token si está presente, pero no requerirlo
+    if auth_header and auth_header.startswith('Bearer '):
+        try:
+            token = auth_header.split(' ')[1]
+            jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            # Token válido, pero no necesitamos hacer nada especial en este caso
+        except:
+            # Token inválido o expirado, pero permitimos continuar ya que es una ruta pública
+            pass
+    
+    db = get_db()
+    
+    # Buscar empresa
+    business = None
+    for u in db['users']:
+        if u['id'] == business_id and u['user_type'] == 'business':
+            business = u
+            break
+    
+    if not business:
+        return jsonify({'error': 'Empresa no encontrada'}), 404
+    
+    # Obtener planes de la empresa
+    plans = [p for p in db.get('subscription_plans', []) 
+             if p['business_id'] == business_id and p.get('estado', 'activo') == 'activo']
+    
+    # Formatear respuesta
+    business_data = {
+        'id': business['id'],
+        'business_name': business.get('business_name', ''),
+        'email': business['email'],
+        'description': business.get('description', ''),
+        'logo': business.get('logo', '🏢'),
+        'categories': business.get('categories', []),
+        'plans': [{
+            'id': p['id'],
+            'name': p['nombre'],
+            'description': p['descripcion'],
+            'monthly_price': p['precio'],
+            'yearly_price': p.get('precio_anual', p['precio'] * 12 * 0.9),  # 10% descuento por defecto
+            'currency': p['moneda'],
+            'period': p['periodo'],
+            'features': p.get('caracteristicas', []),
+            'status': p.get('estado', 'activo')
+        } for p in plans]
+    }
+    
+    return jsonify({'business': business_data})
+
+# Configuración del sistema
+@app.route('/api/admin/settings', methods=['GET'])
+def get_system_settings():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'admin':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        
+        # Obtener o inicializar configuración del sistema
+        if 'system_settings' not in db:
+            db['system_settings'] = {
+                'system_name': 'Suscridash',
+                'currency': 'CLP',
+                'logo_url': '',
+                'session_timeout': 30,  # minutos
+                'email_notifications': True,
+                'app_notifications': True,
+                'created_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            save_db()
+        
+        return jsonify({'settings': db['system_settings']})
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/admin/settings', methods=['PUT'])
+def update_system_settings():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'admin':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        data = request.get_json()
+        
+        # Validar datos de entrada con valores por defecto
+        if not data:
+            return jsonify({'error': 'Datos no proporcionados'}), 400
+        
+        # Establecer valores por defecto si no están presentes
+        system_name = data.get('system_name', 'Suscridash')
+        currency = data.get('currency', 'CLP')
+        
+        try:
+            session_timeout = int(data.get('session_timeout', 30))
+            if session_timeout <= 0:
+                session_timeout = 30
+        except (ValueError, TypeError):
+            session_timeout = 30
+        
+        db = get_db()
+        
+        # Inicializar si no existe
+        if 'system_settings' not in db:
+            db['system_settings'] = {
+                'system_name': 'Suscridash',
+                'currency': 'CLP',
+                'logo_url': '',
+                'session_timeout': 30,
+                'email_notifications': True,
+                'app_notifications': True,
+                'created_at': datetime.utcnow().isoformat()
+            }
+        
+        # Actualizar configuración solo con los campos proporcionados
+        updated_settings = {
+            'system_name': system_name,
+            'currency': currency,
+            'session_timeout': session_timeout,
+            'email_notifications': data.get('email_notifications', db['system_settings'].get('email_notifications', True)),
+            'app_notifications': data.get('app_notifications', db['system_settings'].get('app_notifications', True)),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        # Mantener el logo existente si no se proporciona uno nuevo
+        if 'logo_url' in data:
+            updated_settings['logo_url'] = data['logo_url']
+        elif 'logo_url' in db['system_settings']:
+            updated_settings['logo_url'] = db['system_settings']['logo_url']
+        else:
+            updated_settings['logo_url'] = ''
+        
+        # Mantener la fecha de creación original
+        if 'created_at' in db['system_settings']:
+            updated_settings['created_at'] = db['system_settings']['created_at']
+        else:
+            updated_settings['created_at'] = datetime.utcnow().isoformat()
+        
+        db['system_settings'] = updated_settings
+        save_db()
+        
+        return jsonify({
+            'message': 'Configuración actualizada correctamente',
+            'settings': db['system_settings']
+        })
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
     
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
