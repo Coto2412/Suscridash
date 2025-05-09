@@ -1,138 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { CheckIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import Navbar from '../../components/Navbar';
-
-// Datos simulados
-const empresas = [
-  {
-    id: 1,
-    nombre: 'Tech Solutions',
-    logo: '🖥️',
-    descripcion: 'Soluciones tecnológicas para tu negocio',
-    categorias: ['Software', 'Productividad'],
-    planes: [
-      {
-        id: 1,
-        nombre: "Básico",
-        descripcion: "Perfecto para empezar",
-        precioMensual: 19900,
-        precioAnual: 179900,
-        caracteristicas: ["Acceso básico", "Soporte por email", "Actualizaciones mensuales"]
-      },
-      {
-        id: 2,
-        nombre: "Profesional",
-        descripcion: "Para necesidades avanzadas",
-        precioMensual: 39900,
-        precioAnual: 359900,
-        caracteristicas: ["Acceso completo", "Soporte prioritario", "Actualizaciones semanales", "Integraciones"]
-      },
-      {
-        id: 3,
-        nombre: "Premium",
-        descripcion: "Solución empresarial completa",
-        precioMensual: 89900,
-        precioAnual: 899900,
-        caracteristicas: ["Acceso premium", "Soporte 24/7", "Actualizaciones en tiempo real", "API acceso"]
-      }
-    ]
-  },
-  {
-    id: 2,
-    nombre: 'Digital Marketing',
-    logo: '📈',
-    descripcion: 'Expertos en marketing digital',
-    categorias: ['Marketing', 'Redes Sociales'],
-    planes: [
-      {
-        id: 1,
-        nombre: "Starter",
-        descripcion: "Para emprendedores",
-        precioMensual: 14900,
-        precioAnual: 149900,
-        caracteristicas: ["2 campañas/mes", "Informes básicos", "Soporte email"]
-      },
-      {
-        id: 2,
-        nombre: "Business",
-        descripcion: "Para pequeñas empresas",
-        precioMensual: 29900,
-        precioAnual: 299900,
-        caracteristicas: ["5 campañas/mes", "Informes avanzados", "Soporte prioritario", "Analítica integrada"]
-      }
-    ]
-  },
-  {
-    id: 3,
-    nombre: 'Cloud Services',
-    logo: '☁️',
-    descripcion: 'Almacenamiento y servicios en la nube',
-    categorias: ['Almacenamiento', 'Infraestructura'],
-    planes: [
-      {
-        id: 1,
-        nombre: "10GB",
-        descripcion: "Plan personal",
-        precioMensual: 9900,
-        precioAnual: 99900,
-        caracteristicas: ["10GB almacenamiento", "1 usuario", "Acceso desde cualquier dispositivo"]
-      },
-      {
-        id: 2,
-        nombre: "50GB",
-        descripcion: "Plan equipo",
-        precioMensual: 19900,
-        precioAnual: 199900,
-        caracteristicas: ["50GB almacenamiento", "5 usuarios", "Colaboración en tiempo real"]
-      },
-      {
-        id: 3,
-        nombre: "1TB",
-        descripcion: "Plan empresarial",
-        precioMensual: 49900,
-        precioAnual: 499900,
-        caracteristicas: ["1TB almacenamiento", "Usuarios ilimitados", "Soporte 24/7", "Cifrado avanzado"]
-      }
-    ]
-  },
-  {
-    id: 4,
-    nombre: 'Design Pro',
-    logo: '🎨',
-    descripcion: 'Herramientas de diseño profesional',
-    categorias: ['Diseño', 'Creatividad'],
-    planes: [
-      {
-        id: 1,
-        nombre: "Freelancer",
-        descripcion: "Para trabajadores independientes",
-        precioMensual: 15900,
-        precioAnual: 159900,
-        caracteristicas: ["Acceso a 5 herramientas", "10 descargas/mes", "Plantillas básicas"]
-      },
-      {
-        id: 2,
-        nombre: "Agency",
-        descripcion: "Para equipos creativos",
-        precioMensual: 59900,
-        precioAnual: 599900,
-        caracteristicas: ["Acceso completo", "Descargas ilimitadas", "Plantillas premium", "Colaboración en equipo"]
-      }
-    ]
-  }
-];
+import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const PlanesEmpresa = () => {
   const { empresaId } = useParams();
   const navigate = useNavigate();
   const [planSeleccionado, setPlanSeleccionado] = useState(null);
-  
-  const empresa = empresas.find(e => e.id === parseInt(empresaId));
-  
-  if (!empresa) {
-    return <div>Empresa no encontrada</div>;
-  }
+  const [empresa, setEmpresa] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchEmpresa = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const response = await axios.get(`http://localhost:5000/api/businesses/${empresaId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.data.business) {
+          throw new Error('Empresa no encontrada');
+        }
+        
+        setEmpresa(response.data.business);
+      } catch (err) {
+        console.error('Error al cargar empresa:', err);
+        setError(err.response?.data?.error || err.message || 'Error al cargar la empresa');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmpresa();
+  }, [empresaId]);
 
   const formatoPrecio = (precio) => {
     return new Intl.NumberFormat('es-CL', { 
@@ -149,70 +52,157 @@ const PlanesEmpresa = () => {
   const handleContinuar = () => {
     if (planSeleccionado) {
       navigate(`/suscripciones/${empresaId}/pago`, {
-        state: {  // Enviamos los datos por estado de navegación
+        state: {
           planSeleccionado,
           empresa
         }
       });
+    } else {
+      Swal.fire({
+        title: 'Selecciona un plan',
+        text: 'Debes seleccionar un plan antes de continuar',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      });
     }
   };
-  
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white shadow rounded-lg p-6 text-center">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Error al cargar la empresa</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <Link 
+              to="/suscripciones" 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              <ArrowLeftIcon className="h-5 w-5 mr-2" />
+              Volver a todas las empresas
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!empresa || !empresa.plans || empresa.plans.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white shadow rounded-lg p-6 text-center">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">No hay planes disponibles</h2>
+            <p className="text-gray-600 mb-6">Esta empresa no tiene planes de suscripción activos en este momento.</p>
+            <Link 
+              to="/suscripciones" 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              <ArrowLeftIcon className="h-5 w-5 mr-2" />
+              Volver a todas las empresas
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <Link to="/suscripciones" className="text-indigo-600 hover:text-indigo-800">
-            ← Volver a todas las empresas
+          <Link 
+            to="/suscripciones" 
+            className="inline-flex items-center text-indigo-600 hover:text-indigo-800"
+          >
+            <ArrowLeftIcon className="h-5 w-5 mr-1" />
+            Volver a todas las empresas
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">
-            <span className="text-4xl mr-3">{empresa.logo}</span>
-            {empresa.nombre}
-          </h1>
-          <p className="text-gray-600 mt-2">{empresa.descripcion}</p>
+          
+          <div className="flex items-start mt-4">
+            <div className="bg-indigo-100 p-3 rounded-lg mr-4">
+              <span className="text-3xl">{empresa.logo || '🏢'}</span>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {empresa.business_name}
+              </h1>
+              <p className="text-gray-600 mt-2">{empresa.description || 'No hay descripción disponible'}</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {empresa.categories?.map((category, index) => (
+                  <span 
+                    key={index} 
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                  >
+                    {category}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
         
         <h2 className="text-2xl font-semibold text-gray-900 mb-6">Planes Disponibles</h2>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {empresa.planes.map(plan => (
+          {empresa.plans.map(plan => (
             <div 
               key={plan.id}
               onClick={() => handleSeleccionarPlan(plan)}
-              className={`border rounded-2xl p-6 cursor-pointer transition-all ${
+              className={`border rounded-2xl p-6 cursor-pointer transition-all flex flex-col ${
                 planSeleccionado?.id === plan.id 
                   ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200' 
                   : 'border-gray-200 hover:border-indigo-300'
               }`}
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.nombre}</h3>
-              <p className="text-gray-500 mb-4">{plan.descripcion}</p>
-              
-              <div className="mb-4">
-                <span className="text-2xl font-bold text-gray-900">
-                  {formatoPrecio(plan.precioMensual)}
-                </span>
-                <span className="text-gray-500">/mes</span>
-                <div className="text-sm text-gray-500">
-                  o {formatoPrecio(plan.precioAnual)} al año (2 meses gratis)
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                <p className="text-gray-500 mb-4">{plan.description}</p>
+                
+                <div className="mb-4">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {formatoPrecio(plan.monthly_price)}
+                  </span>
+                  <span className="text-gray-500">/mes</span>
+                  {plan.yearly_price && (
+                    <div className="text-sm text-gray-500">
+                      o {formatoPrecio(plan.yearly_price)} al año ({Math.round((1 - (plan.yearly_price / (plan.monthly_price * 12))) * 100)}% de descuento)
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-2">Incluye:</h4>
+                  <ul className="space-y-2">
+                    {plan.features?.map((feature, i) => (
+                      <li key={i} className="flex items-start">
+                        <CheckIcon className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
               
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-900 mb-2">Incluye:</h4>
-                <ul className="space-y-2">
-                  {plan.caracteristicas.map((caracteristica, i) => (
-                    <li key={i} className="flex items-start">
-                      <CheckIcon className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                      <span className="text-gray-700">{caracteristica}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
               {planSeleccionado?.id === plan.id && (
-                <div className="text-center text-indigo-600 font-medium">
+                <div className="text-center text-indigo-600 font-medium mt-auto">
                   <CheckIcon className="h-5 w-5 inline mr-1" />
                   Seleccionado
                 </div>
@@ -225,13 +215,16 @@ const PlanesEmpresa = () => {
           <button
             onClick={handleContinuar}
             disabled={!planSeleccionado}
-            className={`px-6 py-3 rounded-md text-white font-medium ${
+            className={`inline-flex items-center px-6 py-3 rounded-md text-white font-medium ${
               planSeleccionado 
                 ? 'bg-indigo-600 hover:bg-indigo-700' 
                 : 'bg-gray-400 cursor-not-allowed'
             }`}
           >
-            Continuar al pago →
+            Continuar al pago
+            <svg className="ml-2 -mr-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </button>
         </div>
       </main>

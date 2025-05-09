@@ -27,6 +27,7 @@ const AdminDashboard = () => {
     newCustomers: 0
   });
   const [recentBusinesses, setRecentBusinesses] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [error, setError] = useState(null);
@@ -43,17 +44,21 @@ const AdminDashboard = () => {
       try {
         const token = localStorage.getItem('access_token');
         
-        const [statsResponse, businessesResponse] = await Promise.all([
+        const [statsResponse, businessesResponse, activityResponse] = await Promise.all([
           axios.get('http://localhost:5000/api/admin/stats', {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
           axios.get('http://localhost:5000/api/admin/recent-businesses', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          axios.get('http://localhost:5000/api/admin/recent-activity', {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);
         
         setStats(statsResponse.data);
         setRecentBusinesses(businessesResponse.data.businesses);
+        setRecentActivity(activityResponse.data.activity);
         setLoading(false);
         setError(null);
       } catch (err) {
@@ -69,18 +74,66 @@ const AdminDashboard = () => {
       }
     };
 
-    // Cargar datos inmediatamente
     fetchData();
-    
-    // Configurar intervalo para refrescar cada 30 segundos
     const intervalId = setInterval(fetchData, 30000);
-    
-    // Limpiar intervalo al desmontar el componente
     return () => clearInterval(intervalId);
   }, [navigate]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(value);
+  };
+
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const activityDate = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - activityDate) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return 'Hace unos segundos';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `Hace ${minutes} minuto${minutes !== 1 ? 's' : ''}`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `Hace ${hours} hora${hours !== 1 ? 's' : ''}`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `Hace ${days} día${days !== 1 ? 's' : ''}`;
+    }
+  };
+
+  const getActivityIcon = (iconType) => {
+    switch(iconType) {
+      case 'business':
+        return <BuildingOfficeIcon className="h-4 w-4 text-indigo-600" />;
+      case 'subscription':
+        return <CreditCardIcon className="h-4 w-4 text-purple-600" />;
+      case 'payment':
+        return <BanknotesIcon className="h-4 w-4 text-green-600" />;
+      case 'user':
+        return <UserIcon className="h-4 w-4 text-blue-600" />;
+      case 'update':
+        return <Cog6ToothIcon className="h-4 w-4 text-yellow-600" />;
+      default:
+        return <ChartBarIcon className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getActivityColor = (iconType) => {
+    switch(iconType) {
+      case 'business':
+        return 'bg-indigo-100';
+      case 'subscription':
+        return 'bg-purple-100';
+      case 'payment':
+        return 'bg-green-100';
+      case 'user':
+        return 'bg-blue-100';
+      case 'update':
+        return 'bg-yellow-100';
+      default:
+        return 'bg-gray-100';
+    }
   };
 
   const toggleMobileMenu = () => {
@@ -115,7 +168,6 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow h-96 animate-pulse"></div>
               <div className="space-y-6">
-                <div className="bg-white p-6 rounded-lg shadow h-48 animate-pulse"></div>
                 <div className="bg-white p-6 rounded-lg shadow h-64 animate-pulse"></div>
               </div>
             </div>
@@ -353,7 +405,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Recent businesses and quick actions */}
+            {/* Recent businesses and activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Recent businesses table */}
               <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow">
@@ -413,72 +465,25 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Quick actions */}
-              <div className="space-y-6">
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">Acciones rápidas</h2>
-                  <div className="space-y-3">
-                    <Link 
-                      to="/admin/permisos" 
-                      className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <ShieldCheckIcon className="-ml-1 mr-2 h-5 w-5" />
-                      Gestionar permisos
-                    </Link>
-                    <Link 
-                      to="/admin/ajustes" 
-                      className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <Cog6ToothIcon className="-ml-1 mr-2 h-5 w-5" />
-                      Configuración del sistema
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Recent activity */}
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">Actividad reciente</h2>
-                  <div className="space-y-4">
-                    <div className="flex">
+              {/* Recent activity */}
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Actividad reciente</h2>
+                <div className="space-y-4">
+                  {recentActivity.map((activity) => (
+                    <div key={activity.id} className="flex">
                       <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <UserIcon className="h-4 w-4 text-indigo-600" />
+                        <div className={`h-8 w-8 rounded-full ${getActivityColor(activity.icon)} flex items-center justify-center`}>
+                          {getActivityIcon(activity.icon)}
                         </div>
                       </div>
                       <div className="ml-3">
                         <p className="text-sm text-gray-600">
-                          <span className="font-medium text-gray-900">Nueva empresa registrada</span> - Tech Solutions SA
+                          <span className="font-medium text-gray-900">{activity.title}</span> - {activity.description}
                         </p>
-                        <p className="text-xs text-gray-500">Hace 15 minutos</p>
+                        <p className="text-xs text-gray-500">{formatTimeAgo(activity.timestamp)}</p>
                       </div>
                     </div>
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <CreditCardIcon className="h-4 w-4 text-purple-600" />
-                        </div>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium text-gray-900">Nueva suscripción creada</span> - Plan Premium
-                        </p>
-                        <p className="text-xs text-gray-500">Hace 2 horas</p>
-                      </div>
-                    </div>
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <BanknotesIcon className="h-4 w-4 text-green-600" />
-                        </div>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium text-gray-900">Pago procesado</span> - $120,000 CLP
-                        </p>
-                        <p className="text-xs text-gray-500">Hace 5 horas</p>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>

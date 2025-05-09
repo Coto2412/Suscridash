@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { 
-  UserIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon 
+  UserIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon,
+  ChartBarIcon, CreditCardIcon, Cog6ToothIcon, ArrowLeftOnRectangleIcon,
+  BuildingOfficeIcon, ShieldCheckIcon, Bars3Icon, XMarkIcon
 } from '@heroicons/react/24/outline';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -10,11 +13,20 @@ import withReactContent from 'sweetalert2-react-content';
 const MySwal = withReactContent(Swal);
 
 const AdminUsuarios = () => {
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // Obtener clientes al cargar el componente
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    if (!user || user.user_type !== 'admin') {
+      navigate('/login');
+      return;
+    }
+    setCurrentUser(user);
+
     const fetchClientes = async () => {
       try {
         const token = localStorage.getItem('access_token');
@@ -37,7 +49,7 @@ const AdminUsuarios = () => {
     };
 
     fetchClientes();
-  }, []);
+  }, [navigate]);
 
   // Función para eliminar cliente
   const handleDelete = async (userId) => {
@@ -280,12 +292,31 @@ const AdminUsuarios = () => {
     }
   };
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="flex">
+          {/* Sidebar skeleton */}
+          <div className="hidden md:flex md:flex-shrink-0">
+            <div className="flex flex-col w-64 fixed h-full bg-white border-r border-gray-200">
+              <div className="h-16 bg-gray-200 animate-pulse"></div>
+              <div className="p-4 space-y-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          {/* Content skeleton */}
+          <div className="flex-1 md:ml-64 p-6">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mt-20"></div>
+          </div>
         </div>
       </div>
     );
@@ -293,83 +324,239 @@ const AdminUsuarios = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Navbar Superior */}
       <Navbar />
-      <div className="min-h-screen bg-gray-50">
-        <main className="md:ml-64 p-4 md:p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Clientes</h1>
-            <button 
-              onClick={handleCreateCliente}
-              className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              Nuevo Cliente
-            </button>
-          </div>
-
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Registro</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {clientes.map((cliente) => (
-                    <tr key={cliente.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <UserIcon className="h-5 w-5 text-indigo-600" />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{cliente.name}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cliente.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          Cliente
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {cliente.created_at || 'No disponible'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button 
-                            onClick={() => handleViewDetails(cliente.id)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            <EyeIcon className="h-5 w-5" />
-                          </button>
-                          <button 
-                            onClick={() => handleEdit(cliente.id)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(cliente.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      
+      {/* Sidebar y Contenido Principal */}
+      <div className="flex">
+        {/* Sidebar para Desktop */}
+        <div className="hidden md:flex md:flex-shrink-0">
+          <div className="flex flex-col w-64 fixed h-full bg-white border-r border-gray-200">
+            <div className="flex items-center justify-center h-16 px-4 bg-indigo-600">
+              <h1 className="text-xl font-bold text-white">Panel Admin</h1>
+            </div>
+            <div className="flex flex-col h-full p-4 overflow-y-auto">
+              <div className="flex-1 space-y-4">
+                <div className="pt-4">
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Administración</h2>
+                  <nav className="mt-2 space-y-1">
+                    <Link 
+                      to="/admin/dashboard" 
+                      className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    >
+                      <ChartBarIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                      <span className="ml-3">Dashboard</span>
+                    </Link>
+                    <Link 
+                      to="/admin/empresas" 
+                      className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    >
+                      <BuildingOfficeIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                      <span className="ml-3">Empresas</span>
+                    </Link>
+                    <Link 
+                      to="/admin/usuarios" 
+                      className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-indigo-50 text-indigo-700 group"
+                    >
+                      <UserIcon className="flex-shrink-0 h-5 w-5 text-indigo-600" />
+                      <span className="ml-3">Usuarios</span>
+                    </Link>
+                    <Link 
+                      to="/admin/suscripciones" 
+                      className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    >
+                      <CreditCardIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                      <span className="ml-3">Suscripciones</span>
+                    </Link>
+                  </nav>
+                </div>
+                
+                <div className="pt-4">
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Configuración</h2>
+                  <nav className="mt-2 space-y-1">
+                    <Link 
+                      to="/admin/ajustes" 
+                      className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    >
+                      <Cog6ToothIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                      <span className="ml-3">Ajustes</span>
+                    </Link>
+                    <Link 
+                      to="/admin/permisos" 
+                      className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    >
+                      <ShieldCheckIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                      <span className="ml-3">Permisos</span>
+                    </Link>
+                  </nav>
+                </div>
+              </div>
+              
+              <div className="pb-4">
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('currentUser');
+                    localStorage.removeItem('access_token');
+                    navigate('/login');
+                  }}
+                  className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                >
+                  <ArrowLeftOnRectangleIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                  <span className="ml-3">Cerrar sesión</span>
+                </button>
+              </div>
             </div>
           </div>
-        </main>
+        </div>
+
+        {/* Botón de menú móvil */}
+        <div className="md:hidden fixed top-16 right-4 z-20">
+          <button
+            onClick={toggleMobileMenu}
+            className="p-2 rounded-md bg-indigo-600 text-white focus:outline-none"
+          >
+            {mobileMenuOpen ? (
+              <XMarkIcon className="h-6 w-6" />
+            ) : (
+              <Bars3Icon className="h-6 w-6" />
+            )}
+          </button>
+        </div>
+
+        {/* Sidebar para Mobile */}
+        {mobileMenuOpen && (
+          <div className="md:hidden fixed inset-0 z-10">
+            <div className="absolute inset-0 bg-gray-600 bg-opacity-75" onClick={toggleMobileMenu}></div>
+            <div className="relative flex flex-col w-3/4 h-full bg-white">
+              <div className="flex items-center justify-center h-16 px-4 bg-indigo-600">
+                <h1 className="text-xl font-bold text-white">Panel Admin</h1>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto">
+                <nav className="space-y-4">
+                  <Link 
+                    to="/admin/dashboard" 
+                    className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    onClick={toggleMobileMenu}
+                  >
+                    <ChartBarIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                    <span className="ml-3">Dashboard</span>
+                  </Link>
+                  <Link 
+                    to="/admin/empresas" 
+                    className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    onClick={toggleMobileMenu}
+                  >
+                    <BuildingOfficeIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                    <span className="ml-3">Empresas</span>
+                  </Link>
+                  <Link 
+                    to="/admin/usuarios" 
+                    className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-indigo-50 text-indigo-700 group"
+                    onClick={toggleMobileMenu}
+                  >
+                    <UserIcon className="flex-shrink-0 h-5 w-5 text-indigo-600" />
+                    <span className="ml-3">Usuarios</span>
+                  </Link>
+                  <Link 
+                    to="/admin/suscripciones" 
+                    className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    onClick={toggleMobileMenu}
+                  >
+                    <CreditCardIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                    <span className="ml-3">Suscripciones</span>
+                  </Link>
+                  <Link 
+                    to="/admin/ajustes" 
+                    className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 group"
+                    onClick={toggleMobileMenu}
+                  >
+                    <Cog6ToothIcon className="flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
+                    <span className="ml-3">Ajustes</span>
+                  </Link>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contenido Principal */}
+        <div className="flex-1 md:ml-64">
+          <main className="p-4 md:p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">Gestión de Clientes</h1>
+              <button 
+                onClick={handleCreateCliente}
+                className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Nuevo Cliente
+              </button>
+            </div>
+
+            <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Registro</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {clientes.map((cliente) => (
+                      <tr key={cliente.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                              <UserIcon className="h-5 w-5 text-indigo-600" />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{cliente.name}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cliente.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Cliente
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {cliente.created_at || 'No disponible'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => handleViewDetails(cliente.id)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              <EyeIcon className="h-5 w-5" />
+                            </button>
+                            <button 
+                              onClick={() => handleEdit(cliente.id)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(cliente.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );

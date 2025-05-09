@@ -3,6 +3,7 @@ from flask_cors import CORS
 import jwt
 from datetime import datetime, timedelta
 import os
+import uuid
 from dotenv import load_dotenv
 
 # Primero cargar configuración
@@ -236,8 +237,7 @@ def get_all_businesses():
         for business in businesses:
             formatted_businesses.append({
                 'id': business['id'],
-                'name': business.get('business_name', 'Sin nombre'),
-                'tax_id': business.get('tax_id', ''),
+                'business_name': business.get('business_name', 'Sin nombre'),
                 'email': business['email'],
                 'status': business.get('status', 'active'),
                 'subscriptions': business.get('subscriptions', 0),
@@ -530,6 +530,274 @@ def update_business(business_id):
     except jwt.InvalidTokenError:
         return jsonify({'error': 'Token inválido'}), 401
     
+@app.route('/api/admin/recent-activity', methods=['GET'])
+def get_recent_activity():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'admin':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        # Datos simulados de actividad - en un sistema real esto vendría de la base de datos
+        recent_activity = [
+            {
+                'id': '1',
+                'type': 'new_business',
+                'title': 'Nueva empresa registrada',
+                'description': 'Tech Solutions SA',
+                'timestamp': '2023-11-15T10:30:00',
+                'icon': 'business'
+            },
+            {
+                'id': '2',
+                'type': 'new_subscription',
+                'title': 'Nueva suscripción creada',
+                'description': 'Plan Premium',
+                'timestamp': '2023-11-15T09:15:00',
+                'icon': 'subscription'
+            },
+            {
+                'id': '3',
+                'type': 'payment',
+                'title': 'Pago procesado',
+                'description': '$120,000 CLP',
+                'timestamp': '2023-11-14T16:45:00',
+                'icon': 'payment'
+            },
+            {
+                'id': '4',
+                'type': 'user_signup',
+                'title': 'Nuevo usuario registrado',
+                'description': 'cliente@nuevo.cl',
+                'timestamp': '2023-11-14T14:20:00',
+                'icon': 'user'
+            },
+            {
+                'id': '5',
+                'type': 'business_updated',
+                'title': 'Empresa actualizada',
+                'description': 'Marketing Digital SpA',
+                'timestamp': '2023-11-14T11:10:00',
+                'icon': 'update'
+            }
+        ]
+        
+        return jsonify({'activity': recent_activity})
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+    
+@app.route('/api/admin/subscriptions', methods=['GET'])
+def get_all_subscriptions():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'admin':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        return jsonify({'subscriptions': db.get('subscriptions', [])})
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
 
+@app.route('/api/admin/subscriptions/<subscription_id>', methods=['DELETE'])
+def delete_subscription(subscription_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'admin':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        subscriptions = db.get('subscriptions', [])
+        
+        # Buscar y eliminar la suscripción
+        for i, sub in enumerate(subscriptions):
+            if sub['id'] == subscription_id:
+                del subscriptions[i]
+                save_db()
+                return jsonify({'message': 'Suscripción eliminada correctamente'})
+        
+        return jsonify({'error': 'Suscripción no encontrada'}), 404
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+    
+@app.route('/api/admin/subscriptions/<subscription_id>', methods=['PUT'])
+def update_subscription(subscription_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'admin':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        data = request.get_json()
+        
+        # Validar datos de entrada
+        required_fields = ['plan_name', 'status', 'monthly_amount']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Falta el campo requerido: {field}'}), 400
+        
+        # Validar estados permitidos
+        valid_statuses = ['active', 'pending', 'cancelled']
+        if data['status'] not in valid_statuses:
+            return jsonify({'error': f'Estado no válido. Debe ser uno de: {", ".join(valid_statuses)}'}), 400
+        
+        # Validar monto positivo
+        if not isinstance(data['monthly_amount'], (int, float)) or data['monthly_amount'] <= 0:
+            return jsonify({'error': 'El monto mensual debe ser un número positivo'}), 400
+        
+        db = get_db()
+        subscriptions = db.get('subscriptions', [])
+        
+        # Buscar y actualizar suscripción
+        for sub in subscriptions:
+            if sub['id'] == subscription_id:
+                sub.update({
+                    'plan_name': data['plan_name'],
+                    'status': data['status'],
+                    'monthly_amount': data['monthly_amount']
+                })
+                save_db()
+                return jsonify({
+                    'message': 'Suscripción actualizada correctamente',
+                    'subscription': sub
+                })
+        
+        return jsonify({'error': 'Suscripción no encontrada'}), 404
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+
+@app.route('/api/admin/subscriptions', methods=['POST'])
+def create_subscription():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'admin':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        data = request.get_json()
+        
+        # Validar datos de entrada
+        required_fields = ['business_id', 'plan_name', 'status', 'monthly_amount', 'start_date']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Falta el campo requerido: {field}'}), 400
+        
+        # Validar estados permitidos
+        valid_statuses = ['active', 'pending']
+        if data['status'] not in valid_statuses:
+            return jsonify({'error': f'Estado no válido. Debe ser uno de: {", ".join(valid_statuses)}'}), 400
+        
+        # Validar monto positivo
+        if not isinstance(data['monthly_amount'], (int, float)) or data['monthly_amount'] <= 0:
+            return jsonify({'error': 'El monto debe ser un número positivo'}), 400
+        
+        # Validar fecha
+        try:
+            start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}), 400
+        
+        # Calcular fecha de renovación (1 año después)
+        renewal_date = start_date + timedelta(days=365)
+        
+        db = get_db()
+        
+        # Obtener nombre de la empresa
+        business_name = ""
+        for user in db['users']:
+            if user['id'] == data['business_id'] and user['user_type'] == 'business':
+                business_name = user.get('business_name', '')
+                break
+        
+        # Crear nueva suscripción
+        new_subscription = {
+            'id': str(uuid.uuid4()),
+            'business_id': data['business_id'],
+            'business_name': business_name,
+            'plan_name': data['plan_name'],
+            'start_date': data['start_date'],
+            'renewal_date': renewal_date.strftime('%Y-%m-%d'),
+            'status': data['status'],
+            'monthly_amount': data['monthly_amount'],
+            'payment_method': 'credit_card',  # Valor por defecto
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        # Agregar a la base de datos
+        if 'subscriptions' not in db:
+            db['subscriptions'] = []
+        db['subscriptions'].append(new_subscription)
+        save_db()
+        
+        return jsonify({
+            'message': 'Suscripción creada correctamente',
+            'subscription': new_subscription
+        }), 201
+        
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+    
+@app.route('/api/customer/subscription', methods=['GET'])
+def check_customer_subscription():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token no proporcionado'}), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        if payload['user_type'] != 'customer':
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        
+        db = get_db()
+        # Verificar si el usuario tiene suscripciones activas
+        subscriptions = db.get('subscriptions', [])
+        user_subscriptions = [s for s in subscriptions 
+                            if s.get('customer_id') == payload['user_id'] 
+                            and s.get('status') == 'active']
+        
+        return jsonify({
+            'hasSubscription': len(user_subscriptions) > 0,
+            'subscriptions': user_subscriptions
+        })
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expirado'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Token inválido'}), 401
+    
+    
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -48,5 +48,19 @@
       "business_name": "empresa spa",
       "tax_id": "12345678-9"
     }
+  ],
+  "subscriptions": [
+    {
+      "id": "10dc0617-b00f-402d-aa91-824056c185e8",
+      "business_id": "3873e0a0-81e9-4484-bb41-c008c665a33a",
+      "business_name": "Universidad Cat\u00f3lica",
+      "plan_name": "plan premium",
+      "start_date": "2025-05-09",
+      "renewal_date": "2026-05-09",
+      "status": "active",
+      "monthly_amount": 30000,
+      "payment_method": "credit_card",
+      "created_at": "2025-05-09T00:22:45.460015"
+    }
   ]
 }

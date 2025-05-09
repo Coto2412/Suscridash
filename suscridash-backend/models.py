@@ -78,9 +78,37 @@ def init_db():
                         'status': 'active',
                         'created_at': '2023-09-12T11:10:00'
                 }
-            ]
-        }
-        save_db()
+            ],
+            'subscriptions': [
+                    {
+                        'id': '1',
+                        'business_id': '2',
+                        'customer_id': '3',
+                        'business_name': 'Empresa Ejemplo',
+                        'plan_name': 'Empresarial',
+                        'start_date': '2023-01-01',
+                        'renewal_date': '2024-01-01',
+                        'status': 'active',
+                        'monthly_amount': 89900,
+                        'payment_method': 'credit_card',
+                        'created_at': '2023-01-01T00:00:00'
+                    },
+                    {
+                        'id': '2',
+                        'business_id': '4',
+                        'customer_id': '3',
+                        'business_name': 'Tech Solutions SA',
+                        'plan_name': 'Profesional',
+                        'start_date': '2023-02-15',
+                        'renewal_date': '2024-02-15',
+                        'status': 'active',
+                        'monthly_amount': 39900,
+                        'payment_method': 'bank_transfer',
+                        'created_at': '2023-02-15T10:30:00'
+                    }
+                ]
+            }
+            save_db()   
 
 def save_db():
     with open(DB_FILE, 'w') as f:
