@@ -12,7 +12,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173"],
+        "origins": ["http://localhost:5173",
+                    "https://suscridash.onrender.com"
+                    ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "expose_headers": ["Content-Type"],
